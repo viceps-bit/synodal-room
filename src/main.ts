@@ -232,9 +232,217 @@ function toogleBasemap(isRaster: boolean) {
   map.on("styledata", waitForStyle);
 }
 
-map.on("click", "idn-fua-fill-layer", (e) => {
-  console.log(e.features);
-});
+// map.on("click", "idn-fua-fill-layer", (e) => {
+//   console.log(e.features);
+// });
+
+// Layer configuration for the toggle control
+interface LayerConfig {
+  id: string;
+  label: string;
+  layers: string[];
+  color: string;
+}
+
+const LAYER_CONFIGS: LayerConfig[] = [
+  {
+    id: "fua",
+    label: "Urban Areas",
+    layers: ["idn-fua-fill-layer", "idn-fua-line-layer"],
+    color: "#FFA500",
+  },
+  {
+    id: "population",
+    label: "Population Density",
+    layers: ["idn-h3-pop-density-layer"],
+    color: "#35b779",
+  },
+  {
+    id: "competitors",
+    label: "Competitors",
+    layers: ["competitor-branches-layer"],
+    color: "#00EEFF",
+  },
+  {
+    id: "heatmap",
+    label: "Customer Heatmap",
+    layers: ["mandala-customers-heatmap"],
+    color: "#FF4500",
+  },
+  {
+    id: "branches",
+    label: "ADMF Branches",
+    layers: [
+      "admf_branch_points",
+      "admf_branch_syariah",
+      "admf_branch_car",
+      "admf_branch_icon",
+    ],
+    color: "#FCDE02",
+  },
+];
+
+const LAYER_STORAGE_KEY = "titan-layer-visibility";
+
+class LayerToggleControl implements IControl {
+  private _container!: HTMLDivElement;
+  private _toggleButton!: HTMLButtonElement;
+  private _layerList!: HTMLDivElement;
+  private _map!: maplibregl.Map;
+  private _expanded: boolean = false;
+  private _layerStates: Map<string, boolean>;
+  private _checkboxes: Map<string, HTMLInputElement> = new Map();
+
+  constructor() {
+    this._layerStates = this._loadLayerStates();
+  }
+
+  private _loadLayerStates(): Map<string, boolean> {
+    const saved = localStorage.getItem(LAYER_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return new Map(Object.entries(parsed));
+      } catch {
+        // Invalid JSON, use defaults
+      }
+    }
+    // Default: all layers visible
+    return new Map(LAYER_CONFIGS.map((config) => [config.id, true]));
+  }
+
+  private _saveLayerStates(): void {
+    const obj = Object.fromEntries(this._layerStates);
+    localStorage.setItem(LAYER_STORAGE_KEY, JSON.stringify(obj));
+  }
+
+  onAdd(map: maplibregl.Map): HTMLElement {
+    this._map = map;
+    this._container = document.createElement("div");
+    this._container.className = "maplibregl-ctrl maplibregl-ctrl-layers";
+
+    // Create toggle button
+    this._toggleButton = this._createToggleButton();
+    this._container.appendChild(this._toggleButton);
+
+    // Create layer list
+    this._layerList = this._createLayerList();
+    this._container.appendChild(this._layerList);
+
+    // Apply initial layer states when style is loaded
+    this._map.on("styledata", () => this._applyLayerStates());
+
+    return this._container;
+  }
+
+  private _createToggleButton(): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "maplibregl-ctrl-layers-toggle";
+    button.setAttribute("aria-label", "Toggle layer panel");
+    button.innerHTML = `
+      <span>Layers</span>
+      <span class="maplibregl-ctrl-layers-toggle-icon">▼</span>
+    `;
+
+    button.addEventListener("click", () => {
+      this._expanded = !this._expanded;
+      button.classList.toggle("expanded", this._expanded);
+      this._layerList.classList.toggle("expanded", this._expanded);
+    });
+
+    return button;
+  }
+
+  private _createLayerList(): HTMLDivElement {
+    const list = document.createElement("div");
+    list.className = "maplibregl-ctrl-layers-list";
+
+    LAYER_CONFIGS.forEach((config) => {
+      const item = this._createLayerItem(config);
+      list.appendChild(item);
+    });
+
+    return list;
+  }
+
+  private _createLayerItem(config: LayerConfig): HTMLDivElement {
+    const item = document.createElement("div");
+    item.className = "maplibregl-ctrl-layers-item";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "maplibregl-ctrl-layers-checkbox";
+    checkbox.id = `layer-${config.id}`;
+    checkbox.checked = this._layerStates.get(config.id) ?? true;
+    this._checkboxes.set(config.id, checkbox);
+
+    const label = document.createElement("label");
+    label.className = "maplibregl-ctrl-layers-label";
+    label.htmlFor = `layer-${config.id}`;
+    label.textContent = config.label;
+
+    const colorIndicator = document.createElement("span");
+    colorIndicator.className = "maplibregl-ctrl-layers-color";
+    colorIndicator.style.backgroundColor = config.color;
+
+    // Toggle on checkbox change
+    checkbox.addEventListener("change", () => {
+      this._toggleLayer(config.id, checkbox.checked);
+    });
+
+    // Toggle on item click (excluding checkbox)
+    item.addEventListener("click", (e) => {
+      if (e.target !== checkbox) {
+        checkbox.checked = !checkbox.checked;
+        this._toggleLayer(config.id, checkbox.checked);
+      }
+    });
+
+    item.appendChild(checkbox);
+    item.appendChild(label);
+    item.appendChild(colorIndicator);
+
+    return item;
+  }
+
+  private _toggleLayer(layerId: string, isVisible: boolean): void {
+    this._layerStates.set(layerId, isVisible);
+    this._saveLayerStates();
+
+    const config = LAYER_CONFIGS.find((c) => c.id === layerId);
+    if (!config) return;
+
+    config.layers.forEach((layer) => {
+      if (this._map.getLayer(layer)) {
+        this._map.setLayoutProperty(
+          layer,
+          "visibility",
+          isVisible ? "visible" : "none"
+        );
+      }
+    });
+  }
+
+  private _applyLayerStates(): void {
+    LAYER_CONFIGS.forEach((config) => {
+      const isVisible = this._layerStates.get(config.id) ?? true;
+      config.layers.forEach((layer) => {
+        if (this._map.getLayer(layer)) {
+          this._map.setLayoutProperty(
+            layer,
+            "visibility",
+            isVisible ? "visible" : "none"
+          );
+        }
+      });
+    });
+  }
+
+  onRemove(): void {
+    this._container.parentNode?.removeChild(this._container);
+  }
+}
 
 class BasemapControl implements IControl {
   private _container!: HTMLDivElement;
@@ -268,5 +476,6 @@ class BasemapControl implements IControl {
   }
 }
 
-map.addControl(new BasemapControl(), "top-left");
+map.addControl(new LayerToggleControl(), "top-left");
+map.addControl(new BasemapControl(), "bottom-left");
 toogleBasemap(false);

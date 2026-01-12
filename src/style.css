@@ -122,3 +122,97 @@
     @apply hover:cursor-pointer;
   }
 }
+
+/* Layer Toggle Control Styles */
+.maplibregl-ctrl-layers {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.maplibregl-ctrl-layers-toggle {
+  width: 100%;
+  height: 29px;
+  padding: 0 10px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 12px;
+  color: #333;
+}
+
+.maplibregl-ctrl-layers-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.maplibregl-ctrl-layers-toggle-icon {
+  transition: transform 200ms ease-in-out;
+  font-size: 10px;
+  color: #666;
+}
+
+.maplibregl-ctrl-layers-toggle.expanded .maplibregl-ctrl-layers-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.maplibregl-ctrl-layers-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 200ms ease-in-out;
+  border-top: 1px solid transparent;
+}
+
+.maplibregl-ctrl-layers-list.expanded {
+  max-height: 300px;
+  border-top-color: #ddd;
+}
+
+.maplibregl-ctrl-layers-item {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.maplibregl-ctrl-layers-item:last-child {
+  border-bottom: none;
+}
+
+.maplibregl-ctrl-layers-item:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.maplibregl-ctrl-layers-checkbox {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #33b5e5;
+  flex-shrink: 0;
+}
+
+.maplibregl-ctrl-layers-label {
+  flex: 1;
+  font-size: 12px;
+  color: #333;
+  cursor: pointer;
+  user-select: none;
+}
+
+.maplibregl-ctrl-layers-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
