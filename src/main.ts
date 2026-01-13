@@ -113,10 +113,8 @@ function addLayers() {
   !map.getSource("lcz-tiles") &&
     map.addSource("lcz-tiles", {
       type: "raster",
-      tiles: [
-        "http://lcz-generator.rub.de/tms/global-map-tiles/latest/{z}/{x}/{y}.png",
-      ],
-      // tileSize: 256,
+      tiles: ["/tms/global-map-tiles/latest/{z}/{x}/{y}.png"],
+      tileSize: 256,
       attribution:
         '© <a href="https://lcz-generator.rub.de">LCZ Generator</a> | WUDAPT',
     });
@@ -129,14 +127,14 @@ function addLayers() {
         type: "raster",
         source: "lcz-tiles",
         paint: {
-          "raster-opacity": 0.7,
+          "raster-opacity": 0.5,
         },
         layout: {
           visibility: "none", // Hidden by default
         },
         minzoom: 5,
       },
-      map.getLayer("idn-h3-pop-density-layer")?.id
+      map.getLayer("tunnel-service-track-casing")?.id
     );
 
   // Competitor Presence Layer
@@ -256,6 +254,7 @@ function toogleBasemap(isRaster: boolean) {
   const waitForStyle = () => {
     if (map.isStyleLoaded()) {
       addLayers();
+      console.log(map.getStyle());
     } else {
       requestAnimationFrame(waitForStyle);
     }

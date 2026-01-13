@@ -12,10 +12,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // "/tms": {
-      //   target: "http://lcz-generator.rub.de",
-      //   changeOrigin: true,
-      // },
+      "/tms": {
+        target: "https://lcz-generator.rub.de",
+        changeOrigin: true,
+      },
     },
   },
 });
