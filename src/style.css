@@ -170,8 +170,27 @@
 }
 
 .maplibregl-ctrl-layers-list.expanded {
-  max-height: 300px;
+  max-height: 70vh;
+  overflow-y: auto;
   border-top-color: #ddd;
+}
+
+/* Scrollbar styling for layer list */
+.maplibregl-ctrl-layers-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.maplibregl-ctrl-layers-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.maplibregl-ctrl-layers-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.maplibregl-ctrl-layers-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .maplibregl-ctrl-layers-item {
@@ -215,4 +234,475 @@
   border-radius: 3px;
   border: 1px solid rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+}
+
+/* Layer Item Wrapper */
+.maplibregl-ctrl-layers-item-wrapper {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.maplibregl-ctrl-layers-item-wrapper:last-child {
+  border-bottom: none;
+}
+
+/* Legend Toggle Button */
+.maplibregl-ctrl-layers-legend-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  border-radius: 3px;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.maplibregl-ctrl-layers-legend-btn:hover {
+  color: #333;
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.maplibregl-ctrl-layers-legend-btn.active {
+  color: #0078d4;
+  background-color: rgba(0, 120, 212, 0.1);
+}
+
+/* Integrated Legend Panel */
+.maplibregl-ctrl-layers-legend {
+  background-color: rgba(0, 0, 0, 0.02);
+  border-top: 1px solid transparent;
+}
+
+.maplibregl-ctrl-layers-legend:not(.expanded) {
+  display: none;
+}
+
+.maplibregl-ctrl-layers-legend.expanded {
+  display: block;
+  padding: 10px;
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+.maplibregl-ctrl-layers-legend-inner {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Scrollbar styling for legend */
+.maplibregl-ctrl-layers-legend-inner::-webkit-scrollbar {
+  width: 5px;
+}
+
+.maplibregl-ctrl-layers-legend-inner::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.maplibregl-ctrl-layers-legend-inner::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.maplibregl-ctrl-layers-legend-inner::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Gradient Legend */
+.maplibregl-ctrl-layers-legend-gradient {
+  margin-bottom: 6px;
+}
+
+.maplibregl-ctrl-layers-legend-bar {
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  margin-bottom: 4px;
+}
+
+.maplibregl-ctrl-layers-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #666;
+}
+
+/* Categorical Legend */
+.maplibregl-ctrl-layers-legend-categorical {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.maplibregl-ctrl-layers-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.maplibregl-ctrl-layers-legend-swatch {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.maplibregl-ctrl-layers-legend-swatch.circle {
+  border-radius: 50%;
+}
+
+.maplibregl-ctrl-layers-legend-swatch.square {
+  border-radius: 2px;
+}
+
+.maplibregl-ctrl-layers-legend-label {
+  font-size: 10px;
+  color: #444;
+  line-height: 1.2;
+}
+
+/* Legend Note */
+.maplibregl-ctrl-layers-legend-note {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  font-size: 9px;
+  color: #888;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+/* ============================================
+   Map Legend Control Styles
+   ============================================ */
+
+/* Main Legend Container */
+.maplibregl-ctrl-legend {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  font: 11px/18px "Helvetica Neue", Arial, Helvetica, sans-serif;
+  overflow: hidden;
+  max-width: 280px;
+}
+
+/* Toggle Button */
+.maplibregl-ctrl-legend-toggle {
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  transition: background-color 150ms ease;
+}
+
+.maplibregl-ctrl-legend-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.maplibregl-ctrl-legend-toggle svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 200ms ease;
+}
+
+.maplibregl-ctrl-legend-toggle.expanded svg {
+  transform: rotate(180deg);
+}
+
+/* Legend Panel */
+.maplibregl-ctrl-legend-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 1px solid transparent;
+}
+
+.maplibregl-ctrl-legend-panel.expanded {
+  max-height: 500px;
+  border-top-color: #ddd;
+}
+
+/* Legend Title */
+.maplibregl-ctrl-legend-title {
+  padding: 10px 12px 8px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Legend Content */
+.maplibregl-ctrl-legend-content {
+  padding: 8px 0;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.maplibregl-ctrl-legend-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.maplibregl-ctrl-legend-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.maplibregl-ctrl-legend-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.maplibregl-ctrl-legend-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Empty State */
+.maplibregl-ctrl-legend-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* Layer Section */
+.maplibregl-ctrl-legend-section {
+  margin-bottom: 16px;
+  padding: 0 12px;
+}
+
+.maplibregl-ctrl-legend-section:last-child {
+  margin-bottom: 8px;
+}
+
+.maplibregl-ctrl-legend-section-title {
+  font-weight: 600;
+  font-size: 11px;
+  color: #333;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+/* Legend Items */
+.maplibregl-ctrl-legend-item {
+  margin-bottom: 12px;
+}
+
+.maplibregl-ctrl-legend-item:last-child {
+  margin-bottom: 0;
+}
+
+.maplibregl-ctrl-legend-item-title {
+  font-weight: 500;
+  font-size: 10px;
+  color: #666;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Gradient Legend */
+.maplibregl-ctrl-legend-gradient {
+  position: relative;
+}
+
+.maplibregl-ctrl-legend-gradient-bar {
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 6px;
+}
+
+.maplibregl-ctrl-legend-heatmap-bar {
+  height: 10px;
+}
+
+.maplibregl-ctrl-legend-gradient-labels {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  font-size: 9px;
+  color: #555;
+  line-height: 1;
+}
+
+.maplibregl-ctrl-legend-gradient-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.maplibregl-ctrl-legend-gradient-labels span:first-child {
+  left: 0;
+  transform: translateX(0);
+}
+
+.maplibregl-ctrl-legend-gradient-labels span:last-child {
+  left: auto;
+  right: 0;
+  transform: translateX(0);
+}
+
+/* Categorical Legend */
+.maplibregl-ctrl-legend-categorical {
+  /* Container styles */
+}
+
+.maplibregl-ctrl-legend-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.maplibregl-ctrl-legend-category-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.maplibregl-ctrl-legend-swatch {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.maplibregl-ctrl-legend-swatch-square {
+  border-radius: 2px;
+}
+
+.maplibregl-ctrl-legend-swatch-circle {
+  border-radius: 50%;
+}
+
+.maplibregl-ctrl-legend-label {
+  font-size: 10px;
+  color: #444;
+  line-height: 1.4;
+}
+
+/* Note Legend */
+.maplibregl-ctrl-legend-note {
+  margin-top: 8px;
+}
+
+.maplibregl-ctrl-legend-note-text {
+  font-size: 9px;
+  color: #777;
+  font-style: italic;
+  line-height: 1.4;
+  padding: 6px 8px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 3px;
+  border-left: 2px solid #ddd;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .maplibregl-ctrl-legend {
+    max-width: 240px;
+  }
+
+  .maplibregl-ctrl-legend-panel.expanded {
+    max-height: 300px;
+  }
+
+  .maplibregl-ctrl-legend-content {
+    max-height: 250px;
+  }
+}
+
+/* Dark Basemap Compatibility */
+@media (prefers-color-scheme: dark) {
+  .maplibregl-ctrl-legend {
+    background: rgba(45, 45, 45, 0.95);
+  }
+
+  .maplibregl-ctrl-legend-toggle {
+    color: #e0e0e0;
+  }
+
+  .maplibregl-ctrl-legend-title,
+  .maplibregl-ctrl-legend-section-title {
+    color: #e0e0e0;
+    border-bottom-color: #555;
+  }
+
+  .maplibregl-ctrl-legend-item-title {
+    color: #bbb;
+  }
+
+  .maplibregl-ctrl-legend-label {
+    color: #ccc;
+  }
+
+  .maplibregl-ctrl-legend-note-text {
+    color: #999;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left-color: #555;
+  }
+
+  .maplibregl-ctrl-legend-gradient-labels {
+    color: #aaa;
+  }
+
+  .maplibregl-ctrl-legend-empty {
+    color: #777;
+  }
+}
+
+/* Satellite Basemap Override */
+.map-satellite .maplibregl-ctrl-legend {
+  background: rgba(30, 30, 30, 0.95);
+}
+
+.map-satellite .maplibregl-ctrl-legend-toggle {
+  color: #e0e0e0;
+}
+
+.map-satellite .maplibregl-ctrl-legend-title,
+.map-satellite .maplibregl-ctrl-legend-section-title {
+  color: #e0e0e0;
+  border-bottom-color: #555;
+}
+
+.map-satellite .maplibregl-ctrl-legend-item-title {
+  color: #bbb;
+}
+
+.map-satellite .maplibregl-ctrl-legend-label {
+  color: #ccc;
+}
+
+.map-satellite .maplibregl-ctrl-legend-note-text {
+  color: #999;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-left-color: #555;
+}
+
+.map-satellite .maplibregl-ctrl-legend-gradient-labels {
+  color: #aaa;
+}
+
+.map-satellite .maplibregl-ctrl-legend-empty {
+  color: #777;
 }

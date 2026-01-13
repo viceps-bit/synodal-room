@@ -12,15 +12,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api/v1/geospatial": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/cog": {
-        target: "http://192.168.99.87:8110",
-        changeOrigin: true,
-      },
+      // "/tms": {
+      //   target: "http://lcz-generator.rub.de",
+      //   changeOrigin: true,
+      // },
     },
-    cors: true,
   },
 });

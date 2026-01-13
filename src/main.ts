@@ -12,6 +12,8 @@ import {
 } from "./constants/map";
 import "./style.css";
 
+const TILE_SERVER = "http://192.168.99.87:8120";
+
 const map = new maplibregl.Map({
   container: "map",
   center: new maplibregl.LngLat(
@@ -34,7 +36,7 @@ function addLayers() {
   !map.getSource("idn-fua") &&
     map.addSource("idn-fua", {
       type: "vector",
-      url: "http://192.168.99.87:8120/IDN_FUA",
+      url: `${TILE_SERVER}/IDN_FUA`,
     }) &&
     map.addLayer(
       {
@@ -69,7 +71,7 @@ function addLayers() {
       {
         source: {
           type: "vector",
-          url: "http://192.168.99.87:8120/indopopulation-res5-10",
+          url: `${TILE_SERVER}/indopopulation-res5-10`,
         },
         "source-layer": "h3_data",
         id: "idn-h3-pop-density-layer",
@@ -107,6 +109,36 @@ function addLayers() {
       map.getLayer("idn-fua-fill-layer")?.id
     );
 
+  // Local Climate Zones (LCZ) Raster Layer
+  !map.getSource("lcz-tiles") &&
+    map.addSource("lcz-tiles", {
+      type: "raster",
+      tiles: [
+        "http://lcz-generator.rub.de/tms/global-map-tiles/latest/{z}/{x}/{y}.png",
+      ],
+      // tileSize: 256,
+      attribution:
+        '© <a href="https://lcz-generator.rub.de">LCZ Generator</a> | WUDAPT',
+    });
+
+  !map.getLayer("lcz-layer") &&
+    map.getSource("lcz-tiles") &&
+    map.addLayer(
+      {
+        id: "lcz-layer",
+        type: "raster",
+        source: "lcz-tiles",
+        paint: {
+          "raster-opacity": 0.7,
+        },
+        layout: {
+          visibility: "none", // Hidden by default
+        },
+        minzoom: 5,
+      },
+      map.getLayer("idn-h3-pop-density-layer")?.id
+    );
+
   // Competitor Presence Layer
   const firstLabelLayerId = map
     .getStyle()
@@ -116,7 +148,7 @@ function addLayers() {
       {
         source: {
           type: "vector",
-          url: "http://192.168.99.87:8120/competitor_branch",
+          url: `${TILE_SERVER}/competitor_branch`,
         },
         id: "competitor-branches-layer",
         "source-layer": "competitor_branches",
@@ -172,7 +204,7 @@ function addLayers() {
         id: "mandala-customers-heatmap",
         source: {
           type: "vector",
-          url: "http://192.168.99.87:8120/mandala_customers_no_filter",
+          url: `${TILE_SERVER}/mandala_customers_no_filter`,
         },
         "source-layer": "mandala_customers",
         type: "heatmap",
@@ -190,7 +222,7 @@ function addLayers() {
   !map.getSource("admf-hi-branch-source") &&
     map.addSource("admf-hi-branch-source", {
       type: "vector",
-      url: "http://192.168.99.87:8120/admf-hi-branch",
+      url: `${TILE_SERVER}/admf-hi-branch`,
     }) &&
     layers.forEach((layer) => {
       map.addLayer(layer as LayerSpecification);
@@ -236,12 +268,31 @@ function toogleBasemap(isRaster: boolean) {
 //   console.log(e.features);
 // });
 
-// Layer configuration for the toggle control
+// Layer configuration for the toggle control with legend data
+interface LegendItem {
+  color: string;
+  label: string;
+  shape?: "circle" | "square";
+}
+
+interface LegendGradient {
+  colors: string[];
+  labels: string[];
+}
+
+interface LayerLegend {
+  type: "categorical" | "gradient" | "heatmap" | "simple";
+  items?: LegendItem[];
+  gradient?: LegendGradient;
+  note?: string;
+}
+
 interface LayerConfig {
   id: string;
   label: string;
   layers: string[];
   color: string;
+  legend: LayerLegend;
 }
 
 const LAYER_CONFIGS: LayerConfig[] = [
@@ -250,24 +301,103 @@ const LAYER_CONFIGS: LayerConfig[] = [
     label: "Urban Areas",
     layers: ["idn-fua-fill-layer", "idn-fua-line-layer"],
     color: "#FFA500",
+    legend: {
+      type: "simple",
+      items: [
+        { color: "#FFA500", label: "Functional Urban Area", shape: "square" },
+      ],
+      note: "Opacity decreases at higher zoom levels",
+    },
   },
   {
     id: "population",
     label: "Population Density",
     layers: ["idn-h3-pop-density-layer"],
     color: "#35b779",
+    legend: {
+      type: "gradient",
+      gradient: {
+        colors: ["#440154", "#31688e", "#35b779", "#fde724"],
+        labels: ["10", "20", "50", "100+"],
+      },
+      note: "Population Density / km²",
+    },
+  },
+  {
+    id: "lcz",
+    label: "Local Climate Zones",
+    layers: ["lcz-layer"],
+    color: "#ff6600",
+    legend: {
+      type: "categorical",
+      items: [
+        { color: "#8c0000", label: "1 - Compact high-rise", shape: "square" },
+        { color: "#d10000", label: "2 - Compact mid-rise", shape: "square" },
+        { color: "#ff0000", label: "3 - Compact low-rise", shape: "square" },
+        { color: "#bf4d00", label: "4 - Open high-rise", shape: "square" },
+        { color: "#ff6600", label: "5 - Open mid-rise", shape: "square" },
+        { color: "#ff9955", label: "6 - Open low-rise", shape: "square" },
+        {
+          color: "#faee05",
+          label: "7 - Lightweight low-rise",
+          shape: "square",
+        },
+        { color: "#bcbcbc", label: "8 - Large low-rise", shape: "square" },
+        { color: "#ffccaa", label: "9 - Sparsely built", shape: "square" },
+        { color: "#555555", label: "10 - Heavy industry", shape: "square" },
+        { color: "#006a00", label: "A - Dense trees", shape: "square" },
+        { color: "#00aa00", label: "B - Scattered trees", shape: "square" },
+        { color: "#648525", label: "C - Bush, scrub", shape: "square" },
+        { color: "#b9db79", label: "D - Low plants", shape: "square" },
+        { color: "#000000", label: "E - Bare rock/paved", shape: "square" },
+        { color: "#fbf7ae", label: "F - Bare soil/sand", shape: "square" },
+        { color: "#6a6aff", label: "G - Water", shape: "square" },
+      ],
+      note: "WUDAPT Local Climate Zone classification",
+    },
   },
   {
     id: "competitors",
     label: "Competitors",
     layers: ["competitor-branches-layer"],
     color: "#00EEFF",
+    legend: {
+      type: "categorical",
+      items: [
+        {
+          color: "rgba(0, 238, 255, 0.78)",
+          label: "ACC / TAF / FIF",
+          shape: "circle",
+        },
+        { color: "rgba(255, 140, 0, 0.78)", label: "BFIN", shape: "circle" },
+        {
+          color: "rgba(3, 78, 161, 0.78)",
+          label: "MTF / MUF",
+          shape: "circle",
+        },
+        { color: "rgba(7, 25, 138, 0.78)", label: "IMFI", shape: "circle" },
+        { color: "rgba(0, 171, 80, 0.78)", label: "OTO", shape: "circle" },
+      ],
+    },
   },
   {
     id: "heatmap",
     label: "Customer Heatmap",
     layers: ["mandala-customers-heatmap"],
     color: "#FF4500",
+    legend: {
+      type: "heatmap",
+      gradient: {
+        colors: [
+          "rgba(0,0,255,0.2)",
+          "rgba(0,255,0,0.5)",
+          "rgba(255,255,0,0.7)",
+          "rgba(255,0,0,0.9)",
+        ],
+        labels: ["Low", "High"],
+      },
+      note: "Customer density (score > 0.6)",
+    },
   },
   {
     id: "branches",
@@ -279,6 +409,15 @@ const LAYER_CONFIGS: LayerConfig[] = [
       "admf_branch_icon",
     ],
     color: "#FCDE02",
+    legend: {
+      type: "categorical",
+      items: [
+        { color: "#FCDE02", label: "Branch Location", shape: "circle" },
+        { color: "#8B4513", label: "Cabang / Satellite", shape: "square" },
+        { color: "#1E90FF", label: "ADMF HI", shape: "square" },
+      ],
+      note: "Icons show Syariah and Car financing",
+    },
   },
 ];
 
@@ -292,6 +431,7 @@ class LayerToggleControl implements IControl {
   private _expanded: boolean = false;
   private _layerStates: Map<string, boolean>;
   private _checkboxes: Map<string, HTMLInputElement> = new Map();
+  private _activeLegend: HTMLDivElement | null = null;
 
   constructor() {
     this._layerStates = this._loadLayerStates();
@@ -307,8 +447,10 @@ class LayerToggleControl implements IControl {
         // Invalid JSON, use defaults
       }
     }
-    // Default: all layers visible
-    return new Map(LAYER_CONFIGS.map((config) => [config.id, true]));
+    // Default: all layers visible except LCZ (hidden by default)
+    return new Map(
+      LAYER_CONFIGS.map((config) => [config.id, config.id !== "lcz"])
+    );
   }
 
   private _saveLayerStates(): void {
@@ -367,6 +509,9 @@ class LayerToggleControl implements IControl {
   }
 
   private _createLayerItem(config: LayerConfig): HTMLDivElement {
+    const wrapper = document.createElement("div");
+    wrapper.className = "maplibregl-ctrl-layers-item-wrapper";
+
     const item = document.createElement("div");
     item.className = "maplibregl-ctrl-layers-item";
 
@@ -386,24 +531,152 @@ class LayerToggleControl implements IControl {
     colorIndicator.className = "maplibregl-ctrl-layers-color";
     colorIndicator.style.backgroundColor = config.color;
 
+    // Legend toggle button
+    const legendBtn = document.createElement("button");
+    legendBtn.type = "button";
+    legendBtn.className = "maplibregl-ctrl-layers-legend-btn";
+    legendBtn.title = "Show legend";
+    legendBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`;
+
+    // Create legend content (hidden by default)
+    const legendContent = this._createLegendContent(config);
+    legendContent.className = "maplibregl-ctrl-layers-legend";
+
     // Toggle on checkbox change
-    checkbox.addEventListener("change", () => {
+    checkbox.addEventListener("change", (e) => {
+      e.stopPropagation();
       this._toggleLayer(config.id, checkbox.checked);
     });
 
-    // Toggle on item click (excluding checkbox)
+    // Toggle layer on item click (excluding checkbox and legend button)
     item.addEventListener("click", (e) => {
-      if (e.target !== checkbox) {
+      const target = e.target as HTMLElement;
+      if (
+        target !== checkbox &&
+        !target.closest(".maplibregl-ctrl-layers-legend-btn")
+      ) {
         checkbox.checked = !checkbox.checked;
         this._toggleLayer(config.id, checkbox.checked);
       }
     });
 
+    // Toggle legend on button click
+    legendBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._toggleLegendVisibility(legendContent, legendBtn);
+    });
+
     item.appendChild(checkbox);
     item.appendChild(label);
     item.appendChild(colorIndicator);
+    item.appendChild(legendBtn);
 
-    return item;
+    wrapper.appendChild(item);
+    wrapper.appendChild(legendContent);
+
+    return wrapper;
+  }
+
+  private _toggleLegendVisibility(
+    legend: HTMLDivElement,
+    btn: HTMLButtonElement
+  ): void {
+    const isExpanded = legend.classList.contains("expanded");
+
+    // Close any other open legend
+    if (this._activeLegend && this._activeLegend !== legend) {
+      this._activeLegend.classList.remove("expanded");
+      const activeBtn =
+        this._activeLegend.previousElementSibling?.querySelector(
+          ".maplibregl-ctrl-layers-legend-btn"
+        );
+      activeBtn?.classList.remove("active");
+    }
+
+    legend.classList.toggle("expanded", !isExpanded);
+    btn.classList.toggle("active", !isExpanded);
+    this._activeLegend = isExpanded ? null : legend;
+  }
+
+  private _createLegendContent(config: LayerConfig): HTMLDivElement {
+    const legend = document.createElement("div");
+    const { legend: legendData } = config;
+
+    // Inner wrapper for grid animation and scrolling
+    const inner = document.createElement("div");
+    inner.className = "maplibregl-ctrl-layers-legend-inner";
+
+    if (legendData.type === "gradient" || legendData.type === "heatmap") {
+      inner.appendChild(this._createGradientLegend(legendData));
+    } else if (
+      legendData.type === "categorical" ||
+      legendData.type === "simple"
+    ) {
+      inner.appendChild(this._createCategoricalLegend(legendData));
+    }
+
+    if (legendData.note) {
+      const note = document.createElement("div");
+      note.className = "maplibregl-ctrl-layers-legend-note";
+      note.textContent = legendData.note;
+      inner.appendChild(note);
+    }
+
+    legend.appendChild(inner);
+    return legend;
+  }
+
+  private _createGradientLegend(legendData: LayerLegend): HTMLDivElement {
+    const container = document.createElement("div");
+    container.className = "maplibregl-ctrl-layers-legend-gradient";
+
+    const bar = document.createElement("div");
+    bar.className = "maplibregl-ctrl-layers-legend-bar";
+    bar.style.background = `linear-gradient(to right, ${legendData.gradient!.colors.join(
+      ", "
+    )})`;
+    container.appendChild(bar);
+
+    const labels = document.createElement("div");
+    labels.className = "maplibregl-ctrl-layers-legend-labels";
+    legendData.gradient!.labels.forEach((label, i) => {
+      const span = document.createElement("span");
+      span.textContent = label;
+      if (i === 0) span.style.textAlign = "left";
+      else if (i === legendData.gradient!.labels.length - 1)
+        span.style.textAlign = "right";
+      else span.style.textAlign = "center";
+      labels.appendChild(span);
+    });
+    container.appendChild(labels);
+
+    return container;
+  }
+
+  private _createCategoricalLegend(legendData: LayerLegend): HTMLDivElement {
+    const container = document.createElement("div");
+    container.className = "maplibregl-ctrl-layers-legend-categorical";
+
+    legendData.items?.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "maplibregl-ctrl-layers-legend-row";
+
+      const swatch = document.createElement("span");
+      swatch.className = `maplibregl-ctrl-layers-legend-swatch ${
+        item.shape === "circle" ? "circle" : "square"
+      }`;
+      swatch.style.backgroundColor = item.color;
+
+      const label = document.createElement("span");
+      label.className = "maplibregl-ctrl-layers-legend-label";
+      label.textContent = item.label;
+
+      row.appendChild(swatch);
+      row.appendChild(label);
+      container.appendChild(row);
+    });
+
+    return container;
   }
 
   private _toggleLayer(layerId: string, isVisible: boolean): void {
