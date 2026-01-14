@@ -137,6 +137,59 @@ function addLayers() {
       map.getLayer("tunnel-service-track-casing")?.id
     );
 
+  // BNPB Layers
+  const LayerToRasterURL = new Map([
+    ["bnpb-flood-tiles", "/data/bnpb/ID_BANJIR_COG.tif"],
+    ["bnpb-extreme-weather-tiles", "/data/bnpb/ID_CUACAEKSTRIM_COG.tif"],
+    ["bnpb-drought-tiles", "/data/bnpb/ID_KEKERINGAN_COG.tif"],
+    ["bnpb-landslide-tiles", "/data/bnpb/ID_TANAHLONGSOR_COG.tif"],
+  ]);
+  const getFloodTileURL = (layerId: string) => {
+    const baseUrl =
+      "http://192.168.99.87:8110/cog/tiles/WebMercatorQuad/{z}/{x}/{y}@1x.png";
+    const params = new URLSearchParams({
+      bidx: "1",
+      colormap_name: "turbo",
+      url: LayerToRasterURL.get(layerId)!,
+    });
+    return `${baseUrl}?${params.toString()}`;
+  };
+  // Add all BNPB disaster layers
+  const bnpbLayerConfigs = [
+    { sourceId: "bnpb-flood-tiles", layerId: "bnpb-flood-layer" },
+    {
+      sourceId: "bnpb-extreme-weather-tiles",
+      layerId: "bnpb-extreme-weather-layer",
+    },
+    { sourceId: "bnpb-drought-tiles", layerId: "bnpb-drought-layer" },
+    { sourceId: "bnpb-landslide-tiles", layerId: "bnpb-landslide-layer" },
+  ];
+
+  bnpbLayerConfigs.forEach(({ sourceId, layerId }) => {
+    !map.getSource(sourceId) &&
+      map.addSource(sourceId, {
+        type: "raster",
+        tiles: [getFloodTileURL(sourceId)],
+        attribution: '© <a href="https://bnpb.go.id">BNPB</a>',
+      });
+    !map.getLayer(layerId) &&
+      map.getSource(sourceId) &&
+      map.addLayer(
+        {
+          id: layerId,
+          type: "raster",
+          source: sourceId,
+          paint: {
+            "raster-opacity": 0.6,
+          },
+          layout: {
+            visibility: "none", // Hidden by default
+          },
+        },
+        map.getLayer("building")?.id
+      );
+  });
+
   // Competitor Presence Layer
   const firstLabelLayerId = map
     .getStyle()
@@ -286,18 +339,27 @@ interface LayerLegend {
   note?: string;
 }
 
+interface LayerChildConfig {
+  id: string;
+  label: string;
+  layers: string[];
+  color: string;
+}
+
 interface LayerConfig {
   id: string;
   label: string;
   layers: string[];
   color: string;
   legend: LayerLegend;
+  isGroup?: boolean;
+  children?: LayerChildConfig[];
 }
 
 const LAYER_CONFIGS: LayerConfig[] = [
   {
     id: "fua",
-    label: "Urban Areas",
+    label: "Functional Urban Areas",
     layers: ["idn-fua-fill-layer", "idn-fua-line-layer"],
     color: "#FFA500",
     legend: {
@@ -353,6 +415,52 @@ const LAYER_CONFIGS: LayerConfig[] = [
         { color: "#6a6aff", label: "G - Water", shape: "square" },
       ],
       note: "WUDAPT Local Climate Zone classification",
+    },
+  },
+  {
+    id: "disaster-risk",
+    label: "Disaster Risk (BNPB)",
+    layers: [
+      "bnpb-flood-layer",
+      "bnpb-extreme-weather-layer",
+      "bnpb-drought-layer",
+      "bnpb-landslide-layer",
+    ],
+    color: "#FF5722",
+    isGroup: true,
+    children: [
+      {
+        id: "disaster-flood",
+        label: "Flood Risk",
+        layers: ["bnpb-flood-layer"],
+        color: "#2196F3",
+      },
+      {
+        id: "disaster-extreme-weather",
+        label: "Extreme Weather",
+        layers: ["bnpb-extreme-weather-layer"],
+        color: "#9C27B0",
+      },
+      {
+        id: "disaster-drought",
+        label: "Drought Risk",
+        layers: ["bnpb-drought-layer"],
+        color: "#FF9800",
+      },
+      {
+        id: "disaster-landslide",
+        label: "Landslide Risk",
+        layers: ["bnpb-landslide-layer"],
+        color: "#795548",
+      },
+    ],
+    legend: {
+      type: "gradient",
+      gradient: {
+        colors: ["#30123b", "#4662d7", "#36aac7", "#1ae4b6", "#72fe5e", "#c8ef34", "#faba39", "#f66b19", "#ca2a04", "#7a0403"],
+        labels: ["Low", "High"],
+      },
+      note: "Risk level based on BNPB data (Turbo colormap)",
     },
   },
   {
@@ -446,10 +554,19 @@ class LayerToggleControl implements IControl {
         // Invalid JSON, use defaults
       }
     }
-    // Default: all layers visible except LCZ (hidden by default)
-    return new Map(
-      LAYER_CONFIGS.map((config) => [config.id, config.id !== "lcz"])
-    );
+    // Default: all layers visible except LCZ and disaster risk layers (hidden by default)
+    const defaultStates = new Map<string, boolean>();
+    LAYER_CONFIGS.forEach((config) => {
+      const hiddenByDefault = config.id === "lcz" || config.id === "disaster-risk";
+      defaultStates.set(config.id, !hiddenByDefault);
+      // Add child layer states for groups
+      if (config.children) {
+        config.children.forEach((child) => {
+          defaultStates.set(child.id, false);
+        });
+      }
+    });
+    return defaultStates;
   }
 
   private _saveLayerStates(): void {
@@ -500,8 +617,13 @@ class LayerToggleControl implements IControl {
     list.className = "maplibregl-ctrl-layers-list";
 
     LAYER_CONFIGS.forEach((config) => {
-      const item = this._createLayerItem(config);
-      list.appendChild(item);
+      if (config.isGroup && config.children) {
+        const groupItem = this._createGroupItem(config);
+        list.appendChild(groupItem);
+      } else {
+        const item = this._createLayerItem(config);
+        list.appendChild(item);
+      }
     });
 
     return list;
@@ -574,6 +696,134 @@ class LayerToggleControl implements IControl {
     wrapper.appendChild(legendContent);
 
     return wrapper;
+  }
+
+  private _createGroupItem(config: LayerConfig): HTMLDivElement {
+    const wrapper = document.createElement("div");
+    wrapper.className = "maplibregl-ctrl-layers-group-wrapper";
+
+    // Group header
+    const header = document.createElement("div");
+    header.className = "maplibregl-ctrl-layers-group-header";
+
+    const expandBtn = document.createElement("button");
+    expandBtn.type = "button";
+    expandBtn.className = "maplibregl-ctrl-layers-group-expand";
+    expandBtn.innerHTML = "▶";
+
+    const label = document.createElement("span");
+    label.className = "maplibregl-ctrl-layers-group-label";
+    label.textContent = config.label;
+
+    const colorIndicator = document.createElement("span");
+    colorIndicator.className = "maplibregl-ctrl-layers-color";
+    colorIndicator.style.backgroundColor = config.color;
+
+    // Legend toggle button for the group
+    const legendBtn = document.createElement("button");
+    legendBtn.type = "button";
+    legendBtn.className = "maplibregl-ctrl-layers-legend-btn";
+    legendBtn.title = "Show legend";
+    legendBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`;
+
+    header.appendChild(expandBtn);
+    header.appendChild(label);
+    header.appendChild(colorIndicator);
+    header.appendChild(legendBtn);
+
+    // Create legend content for group (hidden by default)
+    const legendContent = this._createLegendContent(config);
+    legendContent.className = "maplibregl-ctrl-layers-legend";
+
+    // Children container
+    const childrenContainer = document.createElement("div");
+    childrenContainer.className = "maplibregl-ctrl-layers-group-children";
+
+    config.children?.forEach((child) => {
+      const childItem = this._createChildItem(child);
+      childrenContainer.appendChild(childItem);
+    });
+
+    // Toggle group expansion
+    let isExpanded = false;
+    expandBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      isExpanded = !isExpanded;
+      expandBtn.innerHTML = isExpanded ? "▼" : "▶";
+      childrenContainer.classList.toggle("expanded", isExpanded);
+      header.classList.toggle("expanded", isExpanded);
+    });
+
+    // Toggle legend on button click
+    legendBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._toggleLegendVisibility(legendContent, legendBtn);
+    });
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(legendContent);
+    wrapper.appendChild(childrenContainer);
+
+    return wrapper;
+  }
+
+  private _createChildItem(child: LayerChildConfig): HTMLDivElement {
+    const item = document.createElement("div");
+    item.className = "maplibregl-ctrl-layers-child-item";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "maplibregl-ctrl-layers-checkbox";
+    checkbox.id = `layer-${child.id}`;
+    checkbox.checked = this._layerStates.get(child.id) ?? false;
+    this._checkboxes.set(child.id, checkbox);
+
+    const label = document.createElement("label");
+    label.className = "maplibregl-ctrl-layers-label";
+    label.htmlFor = `layer-${child.id}`;
+    label.textContent = child.label;
+
+    const colorIndicator = document.createElement("span");
+    colorIndicator.className = "maplibregl-ctrl-layers-color";
+    colorIndicator.style.backgroundColor = child.color;
+
+    checkbox.addEventListener("change", (e) => {
+      e.stopPropagation();
+      this._toggleChildLayer(child.id, child.layers, checkbox.checked);
+    });
+
+    item.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target !== checkbox) {
+        checkbox.checked = !checkbox.checked;
+        this._toggleChildLayer(child.id, child.layers, checkbox.checked);
+      }
+    });
+
+    item.appendChild(checkbox);
+    item.appendChild(label);
+    item.appendChild(colorIndicator);
+
+    return item;
+  }
+
+  private _toggleChildLayer(
+    childId: string,
+    layers: string[],
+    isVisible: boolean
+  ): void {
+    this._layerStates.set(childId, isVisible);
+    this._saveLayerStates();
+
+    layers.forEach((layer) => {
+      if (this._map.getLayer(layer)) {
+        this._map.setLayoutProperty(
+          layer,
+          "visibility",
+          isVisible ? "visible" : "none"
+        );
+      }
+    });
   }
 
   private _toggleLegendVisibility(
@@ -698,16 +948,33 @@ class LayerToggleControl implements IControl {
 
   private _applyLayerStates(): void {
     LAYER_CONFIGS.forEach((config) => {
-      const isVisible = this._layerStates.get(config.id) ?? true;
-      config.layers.forEach((layer) => {
-        if (this._map.getLayer(layer)) {
-          this._map.setLayoutProperty(
-            layer,
-            "visibility",
-            isVisible ? "visible" : "none"
-          );
-        }
-      });
+      if (config.isGroup && config.children) {
+        // For groups, apply visibility based on each child's state
+        config.children.forEach((child) => {
+          const isVisible = this._layerStates.get(child.id) ?? false;
+          child.layers.forEach((layer) => {
+            if (this._map.getLayer(layer)) {
+              this._map.setLayoutProperty(
+                layer,
+                "visibility",
+                isVisible ? "visible" : "none"
+              );
+            }
+          });
+        });
+      } else {
+        // Regular layers
+        const isVisible = this._layerStates.get(config.id) ?? true;
+        config.layers.forEach((layer) => {
+          if (this._map.getLayer(layer)) {
+            this._map.setLayoutProperty(
+              layer,
+              "visibility",
+              isVisible ? "visible" : "none"
+            );
+          }
+        });
+      }
     });
   }
 
