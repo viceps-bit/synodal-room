@@ -12,7 +12,9 @@ import {
 } from "./constants/map";
 import "./style.css";
 
-const TILE_SERVER = "http://192.168.99.87:8120";
+const TILE_SERVER = import.meta.env.VITE_MARTIN_TILE_SERVER || "/tiles";
+const LCZ_TILE_SERVER = import.meta.env.VITE_LCZ_TILE_SERVER || "/tms";
+const BNPB_TILE_SERVER = import.meta.env.VITE_BNPB_TILE_SERVER || "";
 
 const map = new maplibregl.Map({
   container: "map",
@@ -113,7 +115,7 @@ function addLayers() {
   !map.getSource("lcz-tiles") &&
     map.addSource("lcz-tiles", {
       type: "raster",
-      tiles: ["/tms/global-map-tiles/latest/{z}/{x}/{y}.png"],
+      tiles: [`${LCZ_TILE_SERVER}/global-map-tiles/latest/{z}/{x}/{y}.png`],
       tileSize: 256,
       attribution:
         '© <a href="https://lcz-generator.rub.de">LCZ Generator</a> | WUDAPT',
@@ -145,8 +147,7 @@ function addLayers() {
     ["bnpb-landslide-tiles", "/data/bnpb/ID_TANAHLONGSOR_COG.tif"],
   ]);
   const getFloodTileURL = (layerId: string) => {
-    const baseUrl =
-      "http://192.168.99.87:8110/cog/tiles/WebMercatorQuad/{z}/{x}/{y}@1x.png";
+    const baseUrl = `${BNPB_TILE_SERVER}/cog/tiles/WebMercatorQuad/{z}/{x}/{y}@1x.png`;
     const params = new URLSearchParams({
       bidx: "1",
       colormap_name: "turbo",
@@ -457,7 +458,18 @@ const LAYER_CONFIGS: LayerConfig[] = [
     legend: {
       type: "gradient",
       gradient: {
-        colors: ["#30123b", "#4662d7", "#36aac7", "#1ae4b6", "#72fe5e", "#c8ef34", "#faba39", "#f66b19", "#ca2a04", "#7a0403"],
+        colors: [
+          "#30123b",
+          "#4662d7",
+          "#36aac7",
+          "#1ae4b6",
+          "#72fe5e",
+          "#c8ef34",
+          "#faba39",
+          "#f66b19",
+          "#ca2a04",
+          "#7a0403",
+        ],
         labels: ["Low", "High"],
       },
       note: "Risk level based on BNPB data (Turbo colormap)",
@@ -557,7 +569,8 @@ class LayerToggleControl implements IControl {
     // Default: all layers visible except LCZ and disaster risk layers (hidden by default)
     const defaultStates = new Map<string, boolean>();
     LAYER_CONFIGS.forEach((config) => {
-      const hiddenByDefault = config.id === "lcz" || config.id === "disaster-risk";
+      const hiddenByDefault =
+        config.id === "lcz" || config.id === "disaster-risk";
       defaultStates.set(config.id, !hiddenByDefault);
       // Add child layer states for groups
       if (config.children) {
