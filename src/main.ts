@@ -147,7 +147,7 @@ function addLayers() {
     ["bnpb-landslide-tiles", "/data/bnpb/ID_TANAHLONGSOR_COG.tif"],
   ]);
   const getFloodTileURL = (layerId: string) => {
-    const baseUrl = `${BNPB_TILE_SERVER}/cog/tiles/WebMercatorQuad/{z}/{x}/{y}@1x.png`;
+    const baseUrl = `${BNPB_TILE_SERVER}/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png`;
     const params = new URLSearchParams({
       bidx: "1",
       colormap_name: "turbo",
