@@ -20,7 +20,7 @@ const map = new maplibregl.Map({
   container: "map",
   center: new maplibregl.LngLat(
     InitialViewState.longitude,
-    InitialViewState.latitude
+    InitialViewState.latitude,
   ),
   zoom: InitialViewState.zoom,
   maxBounds: MapConstants.INDONESIA_BOUNDS as maplibregl.LngLatBoundsLike,
@@ -53,7 +53,7 @@ function addLayers() {
         },
         minzoom: 8,
       },
-      map.getLayer("park")?.id
+      map.getLayer("park")?.id,
     ) &&
     map.addLayer({
       id: "idn-fua-line-layer",
@@ -108,7 +108,7 @@ function addLayers() {
         minzoom: 5,
       },
       // "water"
-      map.getLayer("idn-fua-fill-layer")?.id
+      map.getLayer("idn-fua-fill-layer")?.id,
     );
 
   // Local Climate Zones (LCZ) Raster Layer
@@ -136,7 +136,7 @@ function addLayers() {
         },
         minzoom: 5,
       },
-      map.getLayer("tunnel-service-track-casing")?.id
+      map.getLayer("tunnel-service-track-casing")?.id,
     );
 
   // BNPB Layers
@@ -187,7 +187,7 @@ function addLayers() {
             visibility: "none", // Hidden by default
           },
         },
-        map.getLayer("building")?.id
+        map.getLayer("building")?.id,
       );
   });
 
@@ -246,14 +246,38 @@ function addLayers() {
         ],
         minzoom: 9,
       },
-      firstLabelLayerId
+      firstLabelLayerId,
     );
 
-  // Mandala Customers Heatmap Layer
-  !map.getLayer("mandala-customers-heatmap") &&
+  // ADMF Customer Heatmap Layer (using geometry_count as weight)
+  !map.getLayer("admf-customers-heatmap") &&
     map.addLayer(
       {
-        id: "mandala-customers-heatmap",
+        id: "admf-customers-heatmap",
+        source: {
+          type: "vector",
+          url: `${TILE_SERVER}/admf-customers`,
+        },
+        "source-layer": "admf_customers",
+        type: "heatmap",
+        paint: {
+          "heatmap-weight": ["get", "geometry_count"],
+          "heatmap-radius": 12,
+          "heatmap-opacity": 0.4,
+        },
+        layout: {
+          visibility: "none", // Hidden by default
+        },
+        minzoom: 9,
+      },
+      firstLabelLayerId,
+    );
+
+  // ADMF (HI) Customers Heatmap Layer (formerly Mandala)
+  !map.getLayer("admf-hi-customers-heatmap") &&
+    map.addLayer(
+      {
+        id: "admf-hi-customers-heatmap",
         source: {
           type: "vector",
           url: `${TILE_SERVER}/mandala_customers_no_filter`,
@@ -265,9 +289,12 @@ function addLayers() {
           "heatmap-opacity": 0.4,
         },
         filter: [">", ["get", "total_score"], 0.6],
+        layout: {
+          visibility: "none", // Hidden by default
+        },
         minzoom: 9,
       },
-      firstLabelLayerId
+      firstLabelLayerId,
     );
 
   // ADMF HI Branch Layer
@@ -500,10 +527,25 @@ const LAYER_CONFIGS: LayerConfig[] = [
     },
   },
   {
-    id: "heatmap",
-    label: "Customer Heatmap",
-    layers: ["mandala-customers-heatmap"],
+    id: "customer-heatmaps",
+    label: "Customer Heatmaps",
+    layers: ["admf-customers-heatmap", "admf-hi-customers-heatmap"],
     color: "#FF4500",
+    isGroup: true,
+    children: [
+      {
+        id: "admf-customers",
+        label: "ADMF Customers",
+        layers: ["admf-customers-heatmap"],
+        color: "#FF6347",
+      },
+      {
+        id: "admf-hi-customers",
+        label: "ADMF (HI) Customers",
+        layers: ["admf-hi-customers-heatmap"],
+        color: "#FF4500",
+      },
+    ],
     legend: {
       type: "heatmap",
       gradient: {
@@ -515,7 +557,7 @@ const LAYER_CONFIGS: LayerConfig[] = [
         ],
         labels: ["Low", "High"],
       },
-      note: "Customer density (score > 0.6)",
+      note: "Customer density heatmap",
     },
   },
   {
@@ -566,11 +608,13 @@ class LayerToggleControl implements IControl {
         // Invalid JSON, use defaults
       }
     }
-    // Default: all layers visible except LCZ and disaster risk layers (hidden by default)
+    // Default: all layers visible except LCZ, disaster risk, and customer heatmaps (hidden by default)
     const defaultStates = new Map<string, boolean>();
     LAYER_CONFIGS.forEach((config) => {
       const hiddenByDefault =
-        config.id === "lcz" || config.id === "disaster-risk";
+        config.id === "lcz" ||
+        config.id === "disaster-risk" ||
+        config.id === "customer-heatmaps";
       defaultStates.set(config.id, !hiddenByDefault);
       // Add child layer states for groups
       if (config.children) {
@@ -823,7 +867,7 @@ class LayerToggleControl implements IControl {
   private _toggleChildLayer(
     childId: string,
     layers: string[],
-    isVisible: boolean
+    isVisible: boolean,
   ): void {
     this._layerStates.set(childId, isVisible);
     this._saveLayerStates();
@@ -833,7 +877,7 @@ class LayerToggleControl implements IControl {
         this._map.setLayoutProperty(
           layer,
           "visibility",
-          isVisible ? "visible" : "none"
+          isVisible ? "visible" : "none",
         );
       }
     });
@@ -841,7 +885,7 @@ class LayerToggleControl implements IControl {
 
   private _toggleLegendVisibility(
     legend: HTMLDivElement,
-    btn: HTMLButtonElement
+    btn: HTMLButtonElement,
   ): void {
     const isExpanded = legend.classList.contains("expanded");
 
@@ -850,7 +894,7 @@ class LayerToggleControl implements IControl {
       this._activeLegend.classList.remove("expanded");
       const activeBtn =
         this._activeLegend.previousElementSibling?.querySelector(
-          ".maplibregl-ctrl-layers-legend-btn"
+          ".maplibregl-ctrl-layers-legend-btn",
         );
       activeBtn?.classList.remove("active");
     }
@@ -895,7 +939,7 @@ class LayerToggleControl implements IControl {
     const bar = document.createElement("div");
     bar.className = "maplibregl-ctrl-layers-legend-bar";
     bar.style.background = `linear-gradient(to right, ${legendData.gradient!.colors.join(
-      ", "
+      ", ",
     )})`;
     container.appendChild(bar);
 
@@ -953,7 +997,7 @@ class LayerToggleControl implements IControl {
         this._map.setLayoutProperty(
           layer,
           "visibility",
-          isVisible ? "visible" : "none"
+          isVisible ? "visible" : "none",
         );
       }
     });
@@ -970,7 +1014,7 @@ class LayerToggleControl implements IControl {
               this._map.setLayoutProperty(
                 layer,
                 "visibility",
-                isVisible ? "visible" : "none"
+                isVisible ? "visible" : "none",
               );
             }
           });
@@ -983,7 +1027,7 @@ class LayerToggleControl implements IControl {
             this._map.setLayoutProperty(
               layer,
               "visibility",
-              isVisible ? "visible" : "none"
+              isVisible ? "visible" : "none",
             );
           }
         });
