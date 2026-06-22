@@ -1,9 +1,5 @@
-import maplibregl, {
-  type IControl,
-  type LayerSpecification,
-} from "maplibre-gl";
+import maplibregl, { type IControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { layers } from "./assets/admf_branch_style.json";
 import {
   InitialViewState,
   MapBasemapsRaster,
@@ -191,121 +187,6 @@ function addLayers() {
       );
   });
 
-  // Competitor Presence Layer
-  const firstLabelLayerId = map
-    .getStyle()
-    .layers.find((layer) => layer.id.includes("label"))?.id;
-  !map.getLayer("competitor-branches-layer") &&
-    map.addLayer(
-      {
-        source: {
-          type: "vector",
-          url: `${TILE_SERVER}/competitor_branch`,
-        },
-        id: "competitor-branches-layer",
-        "source-layer": "competitor_branches",
-        type: "circle",
-        paint: {
-          "circle-radius": 4,
-          "circle-color": [
-            "match",
-            ["get", "companyCode"],
-            "ACC",
-            "rgba(0, 238, 255, 0.78)",
-            "TAF",
-            "rgba(0, 238, 255, 0.78)",
-            "FIF",
-            "rgba(0, 238, 255, 0.78)",
-            "BFIN",
-            "rgba(255, 140, 0, 0.78)",
-            "MTF",
-            "rgba(3,78,161, 0.78)",
-            "MUF",
-            "rgba(3,78,161, 0.78)",
-            "IMFI",
-            "rgba(7,25,138, 0.78)",
-            "OTO",
-            "rgba(0,171,80, 0.78)",
-            "rgba(0, 238, 255, 0.78)",
-          ],
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#000000ff",
-        },
-        filter: [
-          "in",
-          "companyCode",
-          "ACC",
-          "BFIN",
-          "FIF",
-          "MTF",
-          "MUF",
-          "IMFI",
-          "ACC",
-          "TAF",
-          "OTO",
-        ],
-        minzoom: 9,
-      },
-      firstLabelLayerId,
-    );
-
-  // ADMF Customer Heatmap Layer (using geometry_count as weight)
-  !map.getLayer("admf-customers-heatmap") &&
-    map.addLayer(
-      {
-        id: "admf-customers-heatmap",
-        source: {
-          type: "vector",
-          url: `${TILE_SERVER}/admf-customers`,
-        },
-        "source-layer": "admf_customers",
-        type: "heatmap",
-        paint: {
-          "heatmap-weight": ["get", "geometry_count"],
-          "heatmap-radius": 12,
-          "heatmap-opacity": 0.4,
-        },
-        layout: {
-          visibility: "none", // Hidden by default
-        },
-        minzoom: 9,
-      },
-      firstLabelLayerId,
-    );
-
-  // ADMF (HI) Customers Heatmap Layer (formerly Mandala)
-  !map.getLayer("admf-hi-customers-heatmap") &&
-    map.addLayer(
-      {
-        id: "admf-hi-customers-heatmap",
-        source: {
-          type: "vector",
-          url: `${TILE_SERVER}/mandala_customers_no_filter`,
-        },
-        "source-layer": "mandala_customers",
-        type: "heatmap",
-        paint: {
-          "heatmap-radius": 12,
-          "heatmap-opacity": 0.4,
-        },
-        filter: [">", ["get", "total_score"], 0.6],
-        layout: {
-          visibility: "none", // Hidden by default
-        },
-        minzoom: 9,
-      },
-      firstLabelLayerId,
-    );
-
-  // ADMF HI Branch Layer
-  !map.getSource("admf-hi-branch-source") &&
-    map.addSource("admf-hi-branch-source", {
-      type: "vector",
-      url: `${TILE_SERVER}/admf-hi-branch`,
-    }) &&
-    layers.forEach((layer) => {
-      map.addLayer(layer as LayerSpecification);
-    }, firstLabelLayerId);
 }
 
 function toogleBasemap(isRaster: boolean) {
@@ -502,87 +383,9 @@ const LAYER_CONFIGS: LayerConfig[] = [
       note: "Risk level based on BNPB data (Turbo colormap)",
     },
   },
-  {
-    id: "competitors",
-    label: "Competitors",
-    layers: ["competitor-branches-layer"],
-    color: "#00EEFF",
-    legend: {
-      type: "categorical",
-      items: [
-        {
-          color: "rgba(0, 238, 255, 0.78)",
-          label: "ACC / TAF / FIF",
-          shape: "circle",
-        },
-        { color: "rgba(255, 140, 0, 0.78)", label: "BFIN", shape: "circle" },
-        {
-          color: "rgba(3, 78, 161, 0.78)",
-          label: "MTF / MUF",
-          shape: "circle",
-        },
-        { color: "rgba(7, 25, 138, 0.78)", label: "IMFI", shape: "circle" },
-        { color: "rgba(0, 171, 80, 0.78)", label: "OTO", shape: "circle" },
-      ],
-    },
-  },
-  {
-    id: "customer-heatmaps",
-    label: "Customer Heatmaps",
-    layers: ["admf-customers-heatmap", "admf-hi-customers-heatmap"],
-    color: "#FF4500",
-    isGroup: true,
-    children: [
-      {
-        id: "admf-customers",
-        label: "ADMF Customers",
-        layers: ["admf-customers-heatmap"],
-        color: "#FF6347",
-      },
-      {
-        id: "admf-hi-customers",
-        label: "ADMF (HI) Customers",
-        layers: ["admf-hi-customers-heatmap"],
-        color: "#FF4500",
-      },
-    ],
-    legend: {
-      type: "heatmap",
-      gradient: {
-        colors: [
-          "rgba(0,0,255,0.2)",
-          "rgba(0,255,0,0.5)",
-          "rgba(255,255,0,0.7)",
-          "rgba(255,0,0,0.9)",
-        ],
-        labels: ["Low", "High"],
-      },
-      note: "Customer density heatmap",
-    },
-  },
-  {
-    id: "branches",
-    label: "ADMF Branches",
-    layers: [
-      "admf_branch_points",
-      "admf_branch_syariah",
-      "admf_branch_car",
-      "admf_branch_icon",
-    ],
-    color: "#FCDE02",
-    legend: {
-      type: "categorical",
-      items: [
-        { color: "#FCDE02", label: "Branch Location", shape: "circle" },
-        { color: "#8B4513", label: "Cabang / Satellite", shape: "square" },
-        { color: "#1E90FF", label: "ADMF HI", shape: "square" },
-      ],
-      note: "Icons show Syariah and Car financing",
-    },
-  },
 ];
 
-const LAYER_STORAGE_KEY = "titan-layer-visibility";
+const LAYER_STORAGE_KEY = "synodal-layer-visibility";
 
 class LayerToggleControl implements IControl {
   private _container!: HTMLDivElement;
@@ -608,13 +411,12 @@ class LayerToggleControl implements IControl {
         // Invalid JSON, use defaults
       }
     }
-    // Default: all layers visible except LCZ, disaster risk, and customer heatmaps (hidden by default)
+    // Default: all layers visible except LCZ and disaster risk (hidden by default)
     const defaultStates = new Map<string, boolean>();
     LAYER_CONFIGS.forEach((config) => {
       const hiddenByDefault =
         config.id === "lcz" ||
-        config.id === "disaster-risk" ||
-        config.id === "customer-heatmaps";
+        config.id === "disaster-risk";
       defaultStates.set(config.id, !hiddenByDefault);
       // Add child layer states for groups
       if (config.children) {
